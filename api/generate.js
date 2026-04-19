@@ -1,24 +1,14 @@
-const express = require("express")
-const cors = require("cors")
-const { Redis } = require("@upstash/redis")
+export default function handler(req, res) {
+  try {
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Use POST" })
+    }
 
-const app = express()
+    const { html = "", mode = "append" } = req.body || {}
 
-app.use(cors())
-app.use(express.json())
+    const id = Math.random().toString(36).substring(2, 10)
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN
-})
-
-app.post("/generate", async (req, res) => {
-  const html = req.body.html || ""
-  const mode = req.body.mode || "append"
-
-  const id = Math.random().toString(36).substring(2, 10)
-
-  const js = `
+    const js = `
 (function(){
 const mode="${mode}"
 const html=\`${html}\`
@@ -33,23 +23,16 @@ document.body.insertAdjacentHTML("beforeend",html)
 })();
 `
 
-  await redis.set(id, js)
+    return res.status(200).json({
+      id,
+      url: `/scripts/${id}.js`,
+      script: js
+    })
 
-  res.json({
-    id,
-    url: `/scripts/${id}.js`
-  })
-})
-
-app.get("/scripts/:id.js", async (req, res) => {
-  const js = await redis.get(req.params.id)
-
-  if (!js) {
-    return res.status(404).send("Not found")
+  } catch (err) {
+    return res.status(500).json({
+      error: "server crashed",
+      details: err.message
+    })
   }
-
-  res.setHeader("Content-Type", "application/javascript")
-  res.send(js)
-})
-
-module.exports = app
+}
