@@ -1,22 +1,18 @@
 const express = require("express")
 const cors = require("cors")
+const { Redis } = require("@upstash/redis")
 
 const app = express()
 
-const corsOptions = {
-  origin: "*",
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type"]
-}
-
-app.use(cors(corsOptions))
+app.use(cors())
 app.use(express.json())
 
-app.options("*", cors(corsOptions))
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN
+})
 
-const scripts = new Map()
-
-app.post("/generate", (req, res) => {
+app.post("/generate", async (req, res) => {
   const html = req.body.html || ""
   const mode = req.body.mode || "append"
 
@@ -37,7 +33,7 @@ document.body.insertAdjacentHTML("beforeend",html)
 })();
 `
 
-  scripts.set(id, js)
+  await redis.set(id, js)
 
   res.json({
     id,
@@ -45,16 +41,15 @@ document.body.insertAdjacentHTML("beforeend",html)
   })
 })
 
-app.get("/scripts/:id.js", (req, res) => {
-  const script = scripts.get(req.params.id)
+app.get("/scripts/:id.js", async (req, res) => {
+  const js = await redis.get(req.params.id)
 
-  if (!script) {
+  if (!js) {
     return res.status(404).send("Not found")
   }
 
   res.setHeader("Content-Type", "application/javascript")
-  res.setHeader("Access-Control-Allow-Origin", "*")
-  res.send(script)
+  res.send(js)
 })
 
 module.exports = app
