@@ -41,7 +41,7 @@ document.body.insertAdjacentHTML("beforeend",html)
 fs.writeFileSync(path.join(scriptsDir,id+".js"),js)
 
 res.json({
-url:"https://pgis-backend.onrender.com/scripts/"+id+".js"
+url:"https://pgis-backend.vercel.app/scripts/"+id+".js"
 })
 
 })
