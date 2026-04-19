@@ -1,29 +1,21 @@
-const express=require("express")
-const cors=require("cors")
-const fs=require("fs")
-const path=require("path")
+const express = require("express")
+const cors = require("cors")
 
-const app=express()
+const app = express()
 
 app.use(cors())
 app.use(express.json())
 
-const scriptsDir=path.join(__dirname,"scripts")
+const scripts = new Map()
 
-if(!fs.existsSync(scriptsDir)){
-fs.mkdirSync(scriptsDir)
-}
+app.post("/generate", (req, res) => {
+  const html = req.body.html || ""
+  const mode = req.body.mode || "append"
 
-app.post("/generate",(req,res)=>{
+  const id = Math.random().toString(36).substring(2, 10)
 
-const html=req.body.html
-const mode=req.body.mode
-
-const id=Math.random().toString(36).substring(2)
-
-const js=`
+  const js = `
 (function(){
-
 const mode="${mode}"
 const html=\`${html}\`
 
@@ -34,19 +26,26 @@ document.close()
 }else{
 document.body.insertAdjacentHTML("beforeend",html)
 }
-
 })();
 `
 
-fs.writeFileSync(path.join(scriptsDir,id+".js"),js)
+  scripts.set(id, js)
 
-res.json({
-url:"https://pgis-backend.vercel.app/scripts/"+id+".js"
+  res.json({
+    id,
+    url: `/scripts/${id}.js`
+  })
 })
 
+app.get("/scripts/:id.js", (req, res) => {
+  const script = scripts.get(req.params.id)
+
+  if (!script) {
+    return res.status(404).send("Not found")
+  }
+
+  res.setHeader("Content-Type", "application/javascript")
+  res.send(script)
 })
 
-app.use("/scripts",express.static(scriptsDir))
-
-const PORT = process.env.PORT || 3000
-app.listen(PORT)
+module.exports = app
