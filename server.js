@@ -12,8 +12,6 @@ app.post("/generate", (req, res) => {
   const html = req.body.html || ""
   const mode = req.body.mode || "append"
 
-  const id = Math.random().toString(36).substring(2, 10)
-
   const js = `
 (function(){
 const mode="${mode}"
@@ -29,11 +27,8 @@ document.body.insertAdjacentHTML("beforeend",html)
 })();
 `
 
-  scripts.set(id, js)
-
   res.json({
-    id,
-    url: `/scripts/${id}.js`
+    url: `data:application/javascript;base64,${Buffer.from(js).toString("base64")}`
   })
 })
 
